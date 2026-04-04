@@ -12,7 +12,7 @@ const ALLOWANCE_TIERS = [
   { maxAge: Infinity, amount: 40 },
 ];
 
-// photo: set to a file path like "photos/ally.jpg" to show a real image.
+// photo: set to a file path like "Photos/name.jpeg" to show a real image.
 // Leave as null to show an initials placeholder instead.
 const KIDS = [
   { id: 1, name: "Ally",     dob: "2012-03-16", chores: ["Clean Living Room"],          photo: "Photos/ally.jpeg" },
@@ -139,7 +139,7 @@ function renderHome() {
         <div class="progress-bar-fill" style="width: ${percent}%"></div>
       </div>
       <div class="card-bottom-row">
-        <span class="kid-on-track">On track to earn: $${projectedEarned} of $${maxAllowance}.00</span>
+        <span class="kid-on-track">Estimated earnings: $${projectedEarned} of $${maxAllowance}.00</span>
       </div>
     `;
 
@@ -402,7 +402,7 @@ function renderKidProgress(kidId) {
         <div class="progress-bar-fill" style="width: ${percent}%"></div>
       </div>
       <p>Completion rate: <strong>${percent}%</strong></p>
-      <p>On track to earn: <strong>$${projectedEarned}</strong> of $${maxAllowance.toFixed(2)}</p>
+      <p>Estimated earnings: <strong>$${projectedEarned}</strong> of $${maxAllowance.toFixed(2)}</p>
     </div>
     <div class="progress-block">
       <h3>Last Month's Payout</h3>
