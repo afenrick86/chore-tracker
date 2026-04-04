@@ -507,3 +507,75 @@ section h2 {
 .dashboard-table td strong {
   color: #1C1C1E;
 }
+
+
+/* =====================
+   MOBILE
+   ===================== */
+
+@media (max-width: 600px) {
+  body {
+    padding: 12px;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Cards: tighten gap */
+  #kids-grid {
+    gap: 12px;
+  }
+
+  /* Sections: reduce inner padding */
+  section {
+    padding: 14px;
+  }
+
+  /* Calendar: tighter cells, smaller text */
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .cal-day {
+    font-size: 0.7rem;
+  }
+
+  .cal-header {
+    font-size: 0.65rem;
+  }
+
+  /* Log buttons: fill the row so they're easy to tap */
+  #log-buttons {
+    width: 100%;
+  }
+
+  #mark-complete,
+  #mark-incomplete {
+    flex: 1;
+    padding: 12px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Dashboard button: full width */
+  #open-dashboard-btn {
+    width: 100%;
+    padding: 14px;
+  }
+
+  /* Dashboard widgets: stack vertically */
+  .dashboard-widgets {
+    grid-template-columns: 1fr;
+  }
+
+  /* Dashboard table: scroll horizontally if needed */
+  #dashboard-table {
+    overflow-x: auto;
+  }
+
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 8px 6px;
+    font-size: 0.8rem;
+  }
+}
