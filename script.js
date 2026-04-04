@@ -139,7 +139,7 @@ function renderHome() {
         <div class="progress-bar-fill" style="width: ${percent}%"></div>
       </div>
       <div class="card-bottom-row">
-        <span class="kid-on-track">Estimated earnings: $${projectedEarned} of $${maxAllowance}.00</span>
+        <span class="kid-on-track">Earnings: $${projectedEarned} of $${maxAllowance}.00</span>
       </div>
     `;
 
@@ -184,6 +184,17 @@ function openKid(kidId) {
       ${photoHtml}
     </div>
   `;
+
+  // If today has no entry yet, auto-log it as not completed.
+  // This makes today show red by default — the kid must actively mark it done.
+  const today = todayString();
+  const hasEntryToday = log.find(function (e) {
+    return e.kidId === kidId && e.date === today;
+  });
+  if (!hasEntryToday) {
+    log.push({ kidId: kidId, date: today, completed: false });
+    localStorage.setItem("chore-log", JSON.stringify(log));
+  }
 
   // Reset selected date and hide the log controls until a day is picked
   selectedDate = null;
@@ -402,7 +413,7 @@ function renderKidProgress(kidId) {
         <div class="progress-bar-fill" style="width: ${percent}%"></div>
       </div>
       <p>Completion rate: <strong>${percent}%</strong></p>
-      <p>Estimated earnings: <strong>$${projectedEarned}</strong> of $${maxAllowance.toFixed(2)}</p>
+      <p>Earnings: <strong>$${projectedEarned}</strong> of $${maxAllowance.toFixed(2)}</p>
     </div>
     <div class="progress-block">
       <h3>Last Month's Payout</h3>
@@ -418,6 +429,7 @@ function renderKidProgress(kidId) {
 // =====================
 
 document.getElementById("back-btn").addEventListener("click", goHome);
+document.querySelector("header h1").addEventListener("click", goHome);
 
 document.getElementById("mark-complete").addEventListener("click", function () {
   if (!selectedDate) return;
