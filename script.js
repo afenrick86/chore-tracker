@@ -4,6 +4,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNwan6r8B5fqxLnX5JXR1Z_Yaq158QmH4",
@@ -16,6 +18,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
+
+async function uploadKidPhoto(kidId, file) {
+  const ext = file.name.split(".").pop();
+  const storageRef = ref(storage, `Photos/${kidId}.${ext}`);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+}
 
 
 // =====================
@@ -747,6 +758,10 @@ function openKidForm(kidId) {
     document.getElementById("form-dob").value = "";
     document.getElementById("form-chore").value = "";
     document.getElementById("form-pin").value = "";
+    document.getElementById("form-photo").value = "";
+    addFormPhotoFile = null;
+    const preview = document.getElementById("form-photo-preview");
+    if (preview) { preview.outerHTML = `<div id="form-photo-preview" class="photo-edit-preview photo-edit-placeholder">?</div>`; }
     document.getElementById("save-kid-btn").disabled = true;
   }
 }
@@ -760,9 +775,21 @@ function openInlineEditForm(kidId) {
   const editBtn = document.querySelector(`.btn-edit[data-id="${kidId}"]`);
   const row = editBtn.closest(".settings-kid-row");
 
+  const currentPhotoHtml = kid.photo
+    ? `<img class="photo-edit-preview" src="${kid.photo}" alt="${kid.name}" />`
+    : `<div class="photo-edit-preview photo-edit-placeholder">${kid.name[0]}</div>`;
+
   const formEl = document.createElement("div");
   formEl.className = "kid-inline-form";
   formEl.innerHTML = `
+    <div class="form-field">
+      <label>Photo</label>
+      <div class="photo-edit-wrap">
+        ${currentPhotoHtml}
+        <label class="btn-photo-choose" for="inline-form-photo">Change Photo</label>
+        <input type="file" id="inline-form-photo" accept="image/*" style="display:none" />
+      </div>
+    </div>
     <div class="form-field">
       <label>Name</label>
       <input type="text" id="inline-form-name" value="${kid.name}" />
@@ -793,6 +820,7 @@ function openInlineEditForm(kidId) {
 
   const saveBtn = formEl.querySelector(".btn-inline-save");
   saveBtn.disabled = true;
+  let selectedPhotoFile = null;
 
   const origName = kid.name;
   const origDob = kid.dob;
@@ -804,15 +832,24 @@ function openInlineEditForm(kidId) {
     const dob = document.getElementById("inline-form-dob").value;
     const chore = document.getElementById("inline-form-chore").value.trim();
     const pin = document.getElementById("inline-form-pin").value.trim();
-    saveBtn.disabled = (name === origName && dob === origDob && chore === origChore && pin === origPin);
+    saveBtn.disabled = !selectedPhotoFile && (name === origName && dob === origDob && chore === origChore && pin === origPin);
   }
+
+  document.getElementById("inline-form-photo").addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    selectedPhotoFile = file;
+    const preview = formEl.querySelector(".photo-edit-preview");
+    preview.outerHTML = `<img class="photo-edit-preview" src="${URL.createObjectURL(file)}" alt="preview" />`;
+    saveBtn.disabled = false;
+  });
 
   document.getElementById("inline-form-name").addEventListener("input", checkInlineDirty);
   document.getElementById("inline-form-dob").addEventListener("change", checkInlineDirty);
   document.getElementById("inline-form-chore").addEventListener("input", checkInlineDirty);
   document.getElementById("inline-form-pin").addEventListener("input", checkInlineDirty);
 
-  saveBtn.addEventListener("click", function () { saveInlineEdit(kidId); });
+  saveBtn.addEventListener("click", function () { saveInlineEdit(kidId, selectedPhotoFile); });
   formEl.querySelector(".btn-inline-cancel").addEventListener("click", cancelInlineEdit);
   formEl.querySelectorAll(".btn-pin-toggle").forEach(wirePinToggle);
 }
@@ -840,7 +877,7 @@ function cancelInlineEdit() {
   if (existing) existing.remove();
 }
 
-async function saveInlineEdit(kidId) {
+async function saveInlineEdit(kidId, photoFile) {
   const name = document.getElementById("inline-form-name").value.trim();
   const dob = document.getElementById("inline-form-dob").value;
   const chore = document.getElementById("inline-form-chore").value.trim();
@@ -852,7 +889,20 @@ async function saveInlineEdit(kidId) {
 
   const pin = document.getElementById("inline-form-pin").value.trim() || null;
   const existingKid = KIDS.find(function (k) { return k.id === kidId; });
-  const kidData = Object.assign({}, existingKid, { name, dob, chores: [chore], pin });
+
+  let photo = existingKid.photo || null;
+  if (photoFile) {
+    showToast("Uploading photo…");
+    try {
+      photo = await uploadKidPhoto(kidId, photoFile);
+    } catch (e) {
+      console.error("Photo upload failed:", e);
+      alert("Photo upload failed: " + (e.message || e.code || "unknown error") + "\n\nCheck that Firebase Storage is enabled and rules allow writes.");
+      return;
+    }
+  }
+
+  const kidData = Object.assign({}, existingKid, { name, dob, chores: [chore], pin, photo });
 
   await setDoc(doc(db, "kids", kidId), kidData);
 
@@ -972,7 +1022,14 @@ async function saveKid() {
 
   const pin = document.getElementById("form-pin").value.trim() || null;
   const id = editingKidId || String(Date.now());
-  const kidData = { id, name, dob, chores: [chore], photo: null, pin };
+
+  let photo = null;
+  if (addFormPhotoFile) {
+    showToast("Uploading photo…");
+    photo = await uploadKidPhoto(id, addFormPhotoFile);
+  }
+
+  const kidData = { id, name, dob, chores: [chore], photo, pin };
 
   await setDoc(doc(db, "kids", id), kidData);
 
@@ -1029,6 +1086,16 @@ document.getElementById("add-kid-btn").addEventListener("click", function () { o
 document.getElementById("save-kid-btn").addEventListener("click", saveKid);
 document.querySelectorAll("#kid-form-section .btn-pin-toggle").forEach(wirePinToggle);
 
+let addFormPhotoFile = null;
+document.getElementById("form-photo").addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  addFormPhotoFile = file;
+  const preview = document.getElementById("form-photo-preview");
+  preview.outerHTML = `<img id="form-photo-preview" class="photo-edit-preview" src="${URL.createObjectURL(file)}" alt="preview" />`;
+  checkAddKidForm();
+});
+
 function checkAddKidForm() {
   const name = document.getElementById("form-name").value.trim();
   const dob = document.getElementById("form-dob").value;
@@ -1067,6 +1134,9 @@ document.getElementById("mark-incomplete").addEventListener("click", function ()
 // we need to wait for the data to arrive before we can display anything.
 async function init() {
   try {
+    // Sign in anonymously so Firestore/Storage rules can require request.auth != null
+    await signInAnonymously(auth);
+
     // Load kids from Firestore
     const kidsSnapshot = await getDocs(collection(db, "kids"));
 

@@ -55,6 +55,14 @@
       <section id="kid-form-section" class="hidden">
         <h2 id="kid-form-title">Add Kid</h2>
         <div class="form-field">
+          <label for="form-photo">Photo (optional)</label>
+          <div class="photo-edit-wrap">
+            <div id="form-photo-preview" class="photo-edit-preview photo-edit-placeholder">?</div>
+            <label class="btn-photo-choose" for="form-photo">Choose Photo</label>
+            <input type="file" id="form-photo" accept="image/*" style="display:none" />
+          </div>
+        </div>
+        <div class="form-field">
           <label for="form-name">Name</label>
           <input type="text" id="form-name" placeholder="First name" />
         </div>
