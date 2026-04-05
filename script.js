@@ -3,7 +3,7 @@
 // =====================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNwan6r8B5fqxLnX5JXR1Z_Yaq158QmH4",
@@ -19,31 +19,33 @@ const db = getFirestore(app);
 
 
 // =====================
-// CONFIGURATION — EDIT THIS SECTION
+// CONFIGURATION
 // =====================
-// Update each child's name, date of birth (YYYY-MM-DD), and assigned chores.
-// Age and max allowance are calculated automatically from the DOB.
 
-// Monthly allowance amounts by age range
-const ALLOWANCE_TIERS = [
-  { maxAge: 5,  amount: 5  },
-  { maxAge: 8,  amount: 10 },
-  { maxAge: 12, amount: 20 },
+// Monthly allowance amounts by age range — loaded from Firestore, seeded on first run
+const DEFAULT_TIERS = [
+  { maxAge: 5,        amount: 5  },
+  { maxAge: 8,        amount: 10 },
+  { maxAge: 12,       amount: 20 },
   { maxAge: Infinity, amount: 40 },
 ];
 
-// photo: set to a file path like "Photos/name.jpeg" to show a real image.
-// Leave as null to show an initials placeholder instead.
-const KIDS = [
-  { id: 1, name: "Ally",     dob: "2012-03-16", chores: ["Clean Living Room"],          photo: "Photos/ally.jpeg" },
-  { id: 2, name: "Olivia",   dob: "2012-12-11", chores: ["Clean Playroom"],             photo: "Photos/olivia.jpeg" },
-  { id: 3, name: "Piper",    dob: "2013-06-28", chores: ["Guest and Upstairs Bathroom"],photo: "Photos/piper.jpeg" },
-  { id: 4, name: "Marivel",  dob: "2014-11-13", chores: ["Clean Playroom"],             photo: "Photos/marivel.jpeg" },
-  { id: 5, name: "Caroline", dob: "2015-08-04", chores: ["Clean Playroom"],             photo: "Photos/caroline.jpeg" },
-  { id: 6, name: "Vivi",     dob: "2016-10-19", chores: ["Load/Unload Dishwasher"],     photo: "Photos/vivi.jpeg" },
-  { id: 7, name: "Wren",     dob: "2017-10-08", chores: ["Feed dogs"],                  photo: "Photos/wren.jpeg" },
-  { id: 8, name: "Emilio",   dob: "2021-11-12", chores: ["Pick up toys"],               photo: "Photos/emilio.jpeg" },
+let ALLOWANCE_TIERS = DEFAULT_TIERS.slice();
+
+// Default kids written to Firestore on first run if no kids exist yet.
+const DEFAULT_KIDS = [
+  { id: "1", name: "Ally",     dob: "2012-03-16", chores: ["Clean Living Room"],           photo: "Photos/ally.jpeg" },
+  { id: "2", name: "Olivia",   dob: "2012-12-11", chores: ["Clean Playroom"],              photo: "Photos/olivia.jpeg" },
+  { id: "3", name: "Piper",    dob: "2013-06-28", chores: ["Guest and Upstairs Bathroom"], photo: "Photos/piper.jpeg" },
+  { id: "4", name: "Marivel",  dob: "2014-11-13", chores: ["Clean Playroom"],              photo: "Photos/marivel.jpeg" },
+  { id: "5", name: "Caroline", dob: "2015-08-04", chores: ["Clean Playroom"],              photo: "Photos/caroline.jpeg" },
+  { id: "6", name: "Vivi",     dob: "2016-10-19", chores: ["Load/Unload Dishwasher"],      photo: "Photos/vivi.jpeg" },
+  { id: "7", name: "Wren",     dob: "2017-10-08", chores: ["Feed dogs"],                   photo: "Photos/wren.jpeg" },
+  { id: "8", name: "Emilio",   dob: "2021-11-12", chores: ["Pick up toys"],                photo: "Photos/emilio.jpeg" },
 ];
+
+// Loaded from Firestore on startup — replaces the hardcoded array
+let KIDS = [];
 
 
 // =====================
@@ -119,7 +121,8 @@ function renderHome() {
   const grid = document.getElementById("kids-grid");
   grid.innerHTML = ""; // clear before re-rendering
 
-  KIDS.forEach(function (kid) {
+  const sortedKids = KIDS.slice().sort(function (a, b) { return a.dob < b.dob ? -1 : 1; });
+  sortedKids.forEach(function (kid) {
     const age = calculateAge(kid.dob);
     const maxAllowance = getMaxAllowance(kid);
     const { percent } = getThisMonthProgress(kid.id);
@@ -229,6 +232,7 @@ function goHome() {
   activeKidId = null;
   document.getElementById("kid-view").classList.add("hidden");
   document.getElementById("dashboard-view").classList.add("hidden");
+  document.getElementById("settings-view").classList.add("hidden");
   document.getElementById("loading-view").classList.add("hidden");
   document.getElementById("home-view").classList.remove("hidden");
   renderHome();
@@ -485,7 +489,8 @@ function renderDashboard() {
 
   // Per-kid earnings table
   let rows = "";
-  KIDS.forEach(function (kid) {
+  const sortedKids = KIDS.slice().sort(function (a, b) { return a.dob < b.dob ? -1 : 1; });
+  sortedKids.forEach(function (kid) {
     const { percent } = getThisMonthProgress(kid.id);
     const maxAllowance = getMaxAllowance(kid);
     const projected = ((percent / 100) * maxAllowance).toFixed(2);
@@ -494,7 +499,7 @@ function renderDashboard() {
 
     rows += `
       <tr>
-        <td><strong>${kid.name}</strong></td>
+        <td><strong>${kid.name}</strong> (${calculateAge(kid.dob)})</td>
         <td>${percent}%</td>
         <td>$${projected}</td>
         <td>$${prev.earned}</td>
@@ -557,12 +562,207 @@ function renderKidProgress(kidId) {
 
 
 // =====================
+// SETTINGS
+// =====================
+
+// Tracks which kid is being edited (null means we're adding a new one)
+let editingKidId = null;
+
+function openSettings() {
+  document.getElementById("dashboard-view").classList.add("hidden");
+  document.getElementById("settings-view").classList.remove("hidden");
+  renderSettingsList();
+  renderPayScale();
+}
+
+function closeSettings() {
+  document.getElementById("settings-view").classList.add("hidden");
+  document.getElementById("dashboard-view").classList.remove("hidden");
+  renderDashboard();
+}
+
+// Renders the list of current kids in the settings page
+function renderSettingsList() {
+  const list = document.getElementById("settings-kids-list");
+  if (KIDS.length === 0) {
+    list.innerHTML = "<p>No kids added yet.</p>";
+    return;
+  }
+  const sortedKids = KIDS.slice().sort(function (a, b) { return a.dob < b.dob ? -1 : 1; });
+  list.innerHTML = sortedKids.map(function (kid) {
+    const age = calculateAge(kid.dob);
+    return `
+      <div class="settings-kid-row">
+        <div class="settings-kid-info">
+          <strong>${kid.name}</strong>
+          <span>Age ${age} &bull; ${kid.chores.join(", ")}</span>
+        </div>
+        <div class="settings-kid-actions">
+          <button class="btn-edit" data-id="${kid.id}">Edit</button>
+          <button class="btn-remove" data-id="${kid.id}">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Wire up edit and remove buttons
+  list.querySelectorAll(".btn-edit").forEach(function (btn) {
+    btn.addEventListener("click", function () { openKidForm(btn.dataset.id); });
+  });
+  list.querySelectorAll(".btn-remove").forEach(function (btn) {
+    btn.addEventListener("click", function () { removeKid(btn.dataset.id); });
+  });
+}
+
+// Opens the add/edit form, pre-filling values if editing an existing kid
+function openKidForm(kidId) {
+  editingKidId = kidId || null;
+  const formSection = document.getElementById("kid-form-section");
+  formSection.classList.remove("hidden");
+
+  if (kidId) {
+    const kid = KIDS.find(function (k) { return k.id === kidId; });
+    document.getElementById("kid-form-title").textContent = "Edit Kid";
+    document.getElementById("form-name").value = kid.name;
+    document.getElementById("form-dob").value = kid.dob;
+    document.getElementById("form-chore").value = kid.chores.join(", ");
+  } else {
+    document.getElementById("kid-form-title").textContent = "Add Kid";
+    document.getElementById("form-name").value = "";
+    document.getElementById("form-dob").value = "";
+    document.getElementById("form-chore").value = "";
+  }
+}
+
+function closeKidForm() {
+  editingKidId = null;
+  document.getElementById("kid-form-section").classList.add("hidden");
+}
+
+// Renders the pay scale editor rows — one row per tier
+function renderPayScale() {
+  const container = document.getElementById("pay-scale-list");
+
+  // Column headers
+  container.innerHTML = `
+    <div class="pay-scale-header">
+      <span>Max Age</span>
+      <span>Monthly Amount ($)</span>
+      <span></span>
+    </div>
+  `;
+
+  ALLOWANCE_TIERS.forEach(function (tier, index) {
+    const row = document.createElement("div");
+    row.className = "pay-scale-row";
+    const isLast = index === ALLOWANCE_TIERS.length - 1;
+    row.innerHTML = `
+      <input type="number" class="tier-age" data-index="${index}"
+        value="${isLast ? "" : tier.maxAge}"
+        ${isLast ? 'disabled placeholder="Any age"' : 'min="1" max="99"'} />
+      <input type="number" class="tier-amount" data-index="${index}"
+        value="${tier.amount}" min="0" step="1" />
+      ${!isLast ? `<button class="btn-remove tier-remove" data-index="${index}">Remove</button>` : "<span></span>"}
+    `;
+    container.appendChild(row);
+  });
+
+  // Add tier button
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn-edit";
+  addBtn.style.marginTop = "8px";
+  addBtn.textContent = "+ Add Tier";
+  addBtn.addEventListener("click", addPayScaleTier);
+  container.appendChild(addBtn);
+
+  // Wire remove buttons
+  container.querySelectorAll(".tier-remove").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const i = parseInt(btn.dataset.index);
+      ALLOWANCE_TIERS.splice(i, 1);
+      renderPayScale();
+    });
+  });
+}
+
+// Inserts a new tier before the final "any age" tier
+function addPayScaleTier() {
+  ALLOWANCE_TIERS.splice(ALLOWANCE_TIERS.length - 1, 0, { maxAge: 0, amount: 0 });
+  renderPayScale();
+}
+
+async function savePayScale() {
+  // Read current values from the inputs
+  const ageInputs = document.querySelectorAll(".tier-age");
+  const amountInputs = document.querySelectorAll(".tier-amount");
+
+  const tiers = [];
+  for (let i = 0; i < ALLOWANCE_TIERS.length; i++) {
+    const isLast = i === ALLOWANCE_TIERS.length - 1;
+    const maxAge = isLast ? Infinity : parseInt(ageInputs[i].value);
+    const amount = parseFloat(amountInputs[i].value);
+    if ((!isLast && isNaN(maxAge)) || isNaN(amount)) {
+      alert("Please fill in all age and amount fields.");
+      return;
+    }
+    tiers.push({ maxAge, amount });
+  }
+
+  // Save to Firestore as a single document
+  await setDoc(doc(db, "settings", "pay-scale"), { tiers });
+  ALLOWANCE_TIERS = tiers;
+  alert("Pay scale saved.");
+}
+
+async function saveKid() {
+  const name = document.getElementById("form-name").value.trim();
+  const dob = document.getElementById("form-dob").value;
+  const chore = document.getElementById("form-chore").value.trim();
+
+  if (!name || !dob || !chore) {
+    alert("Please fill in all fields.");
+    return;
+  }
+
+  // Use existing id when editing, generate a new one when adding
+  const id = editingKidId || String(Date.now());
+  const kidData = { id, name, dob, chores: [chore], photo: null };
+
+  await setDoc(doc(db, "kids", id), kidData);
+
+  // Update local KIDS array
+  const existingIndex = KIDS.findIndex(function (k) { return k.id === id; });
+  if (existingIndex >= 0) {
+    KIDS[existingIndex] = kidData;
+  } else {
+    KIDS.push(kidData);
+  }
+
+  closeKidForm();
+  renderSettingsList();
+}
+
+async function removeKid(kidId) {
+  if (!confirm("Remove this kid? Their chore history will remain in the log.")) return;
+  await deleteDoc(doc(db, "kids", kidId));
+  KIDS = KIDS.filter(function (k) { return k.id !== kidId; });
+  renderSettingsList();
+}
+
+
+// =====================
 // BUTTON WIRING
 // =====================
 
 document.getElementById("back-btn").addEventListener("click", goHome);
 document.getElementById("dashboard-back-btn").addEventListener("click", goHome);
 document.getElementById("open-dashboard-btn").addEventListener("click", openDashboard);
+document.getElementById("open-settings-btn").addEventListener("click", openSettings);
+document.getElementById("settings-back-btn").addEventListener("click", closeSettings);
+document.getElementById("add-kid-btn").addEventListener("click", function () { openKidForm(null); });
+document.getElementById("save-kid-btn").addEventListener("click", saveKid);
+document.getElementById("save-pay-scale-btn").addEventListener("click", savePayScale);
+document.getElementById("cancel-kid-btn").addEventListener("click", closeKidForm);
 document.querySelector("header h1").addEventListener("click", goHome);
 
 document.getElementById("mark-complete").addEventListener("click", function () {
@@ -585,8 +785,31 @@ document.getElementById("mark-incomplete").addEventListener("click", function ()
 // we need to wait for the data to arrive before we can display anything.
 async function init() {
   try {
-    const snapshot = await getDocs(collection(db, "chore-log"));
-    log = snapshot.docs.map(function (d) { return d.data(); });
+    // Load kids from Firestore
+    const kidsSnapshot = await getDocs(collection(db, "kids"));
+
+    if (kidsSnapshot.empty) {
+      // First run — seed Firestore with the default kids
+      for (const kid of DEFAULT_KIDS) {
+        await setDoc(doc(db, "kids", kid.id), kid);
+      }
+      KIDS = DEFAULT_KIDS.slice();
+    } else {
+      KIDS = kidsSnapshot.docs.map(function (d) { return d.data(); });
+    }
+
+    // Load pay scale — seed defaults if not yet saved
+    const payScaleDoc = await getDocs(collection(db, "settings"));
+    const payScaleData = payScaleDoc.docs.find(function (d) { return d.id === "pay-scale"; });
+    if (payScaleData) {
+      ALLOWANCE_TIERS = payScaleData.data().tiers;
+    } else {
+      await setDoc(doc(db, "settings", "pay-scale"), { tiers: DEFAULT_TIERS });
+    }
+
+    // Load chore log
+    const logSnapshot = await getDocs(collection(db, "chore-log"));
+    log = logSnapshot.docs.map(function (d) { return d.data(); });
   } catch (e) {
     console.error("Firestore load failed:", e);
   }

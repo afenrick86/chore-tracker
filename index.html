@@ -40,6 +40,47 @@
         <h2>Earnings by Kid</h2>
         <div id="dashboard-table"></div>
       </section>
+      <div id="settings-btn-wrap">
+        <button id="open-settings-btn">Manage Kids</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS VIEW: add/edit/remove kids — hidden until opened -->
+    <div id="settings-view" class="hidden">
+      <button id="settings-back-btn">← Back</button>
+      <section>
+        <h2>Kids</h2>
+        <div id="settings-kids-list"></div>
+        <button id="add-kid-btn">+ Add Kid</button>
+      </section>
+      <section>
+        <h2>Pay Scale</h2>
+        <p id="pay-scale-hint">Set the monthly allowance amount for each age range.</p>
+        <div id="pay-scale-list"></div>
+        <div id="pay-scale-buttons">
+          <button id="save-pay-scale-btn">Save Pay Scale</button>
+        </div>
+      </section>
+
+      <section id="kid-form-section" class="hidden">
+        <h2 id="kid-form-title">Add Kid</h2>
+        <div class="form-field">
+          <label for="form-name">Name</label>
+          <input type="text" id="form-name" placeholder="First name" />
+        </div>
+        <div class="form-field">
+          <label for="form-dob">Date of Birth</label>
+          <input type="date" id="form-dob" />
+        </div>
+        <div class="form-field">
+          <label for="form-chore">Chore</label>
+          <input type="text" id="form-chore" placeholder="e.g. Clean Living Room" />
+        </div>
+        <div id="kid-form-buttons">
+          <button id="save-kid-btn">Save</button>
+          <button id="cancel-kid-btn">Cancel</button>
+        </div>
+      </section>
     </div>
 
     <!-- KID VIEW: individual tracker — hidden until a kid is selected -->
