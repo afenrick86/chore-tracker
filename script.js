@@ -164,9 +164,9 @@ function renderHome() {
       </div>
     `;
 
-    // Clicking a card opens that kid's detail view
+    // Clicking a card checks for a PIN before opening the detail view
     card.addEventListener("click", function () {
-      openKid(kid.id);
+      requestKidAccess(kid.id);
     });
 
     grid.appendChild(card);
@@ -179,6 +179,71 @@ function renderHome() {
 // =====================
 
 // Opens the detail page for a specific kid
+function requestKidAccess(kidId) {
+  const kid = KIDS.find(function (k) { return k.id === kidId; });
+  if (kid.pin) {
+    showPinModal(kidId);
+  } else {
+    openKid(kidId);
+  }
+}
+
+function showPinModal(kidId) {
+  const kid = KIDS.find(function (k) { return k.id === kidId; });
+  document.getElementById("pin-modal-name").textContent = kid.name;
+  document.getElementById("pin-error").classList.add("hidden");
+  document.getElementById("pin-modal").classList.remove("hidden");
+
+  // Clone inputs to remove any previous event listeners
+  document.querySelectorAll(".pin-digit").forEach(function (input) {
+    const fresh = input.cloneNode(true);
+    fresh.value = "";
+    input.parentNode.replaceChild(fresh, input);
+  });
+
+  const inputs = document.querySelectorAll(".pin-digit");
+  inputs[0].focus();
+
+  inputs.forEach(function (input, i) {
+    input.addEventListener("input", function () {
+      input.value = input.value.replace(/[^0-9]/g, "").slice(0, 1);
+      if (input.value && i < 3) {
+        inputs[i + 1].focus();
+      }
+      if (i === 3 && input.value) {
+        submitPin(kidId);
+      }
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Backspace" && !input.value && i > 0) {
+        inputs[i - 1].focus();
+      }
+    });
+  });
+
+  document.getElementById("pin-cancel-btn").onclick = closePinModal;
+  document.getElementById("pin-modal-backdrop").onclick = closePinModal;
+}
+
+function closePinModal() {
+  document.getElementById("pin-modal").classList.add("hidden");
+}
+
+function submitPin(kidId) {
+  const inputs = document.querySelectorAll(".pin-digit");
+  const entered = Array.from(inputs).map(function (i) { return i.value; }).join("");
+  const kid = KIDS.find(function (k) { return k.id === kidId; });
+
+  if (entered === kid.pin) {
+    closePinModal();
+    openKid(kidId);
+  } else {
+    document.getElementById("pin-error").classList.remove("hidden");
+    inputs.forEach(function (input) { input.value = ""; });
+    inputs[0].focus();
+  }
+}
+
 async function openKid(kidId) {
   window.scrollTo(0, 0);
   activeKidId = kidId;
@@ -664,6 +729,8 @@ function openKidForm(kidId) {
     document.getElementById("form-name").value = "";
     document.getElementById("form-dob").value = "";
     document.getElementById("form-chore").value = "";
+    document.getElementById("form-pin").value = "";
+    document.getElementById("save-kid-btn").disabled = true;
   }
 }
 
@@ -691,6 +758,13 @@ function openInlineEditForm(kidId) {
       <label>Chore</label>
       <input type="text" id="inline-form-chore" value="${kid.chores.join(", ")}" />
     </div>
+    <div class="form-field">
+      <label>PIN (optional)</label>
+      <div class="pin-field-wrap">
+        <input type="password" id="inline-form-pin" value="${kid.pin || ""}" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" />
+        <button type="button" class="btn-pin-toggle" data-target="inline-form-pin">Show</button>
+      </div>
+    </div>
     <div class="inline-form-buttons">
       <button class="btn-inline-save">Save</button>
       <button class="btn-inline-cancel">Cancel</button>
@@ -700,8 +774,48 @@ function openInlineEditForm(kidId) {
   row.insertAdjacentElement("afterend", formEl);
   document.getElementById("inline-form-name").focus();
 
-  formEl.querySelector(".btn-inline-save").addEventListener("click", function () { saveInlineEdit(kidId); });
+  const saveBtn = formEl.querySelector(".btn-inline-save");
+  saveBtn.disabled = true;
+
+  const origName = kid.name;
+  const origDob = kid.dob;
+  const origChore = kid.chores.join(", ");
+  const origPin = kid.pin || "";
+
+  function checkInlineDirty() {
+    const name = document.getElementById("inline-form-name").value.trim();
+    const dob = document.getElementById("inline-form-dob").value;
+    const chore = document.getElementById("inline-form-chore").value.trim();
+    const pin = document.getElementById("inline-form-pin").value.trim();
+    saveBtn.disabled = (name === origName && dob === origDob && chore === origChore && pin === origPin);
+  }
+
+  document.getElementById("inline-form-name").addEventListener("input", checkInlineDirty);
+  document.getElementById("inline-form-dob").addEventListener("change", checkInlineDirty);
+  document.getElementById("inline-form-chore").addEventListener("input", checkInlineDirty);
+  document.getElementById("inline-form-pin").addEventListener("input", checkInlineDirty);
+
+  saveBtn.addEventListener("click", function () { saveInlineEdit(kidId); });
   formEl.querySelector(".btn-inline-cancel").addEventListener("click", cancelInlineEdit);
+  formEl.querySelectorAll(".btn-pin-toggle").forEach(wirePinToggle);
+}
+
+function wirePinToggle(btn) {
+  btn.addEventListener("click", function () {
+    const input = document.getElementById(btn.dataset.target);
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    btn.textContent = showing ? "Show" : "Hide";
+  });
+}
+
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("toast-visible");
+  setTimeout(function () {
+    toast.classList.remove("toast-visible");
+  }, 2500);
 }
 
 function cancelInlineEdit() {
@@ -719,8 +833,9 @@ async function saveInlineEdit(kidId) {
     return;
   }
 
+  const pin = document.getElementById("inline-form-pin").value.trim() || null;
   const existingKid = KIDS.find(function (k) { return k.id === kidId; });
-  const kidData = Object.assign({}, existingKid, { name, dob, chores: [chore] });
+  const kidData = Object.assign({}, existingKid, { name, dob, chores: [chore], pin });
 
   await setDoc(doc(db, "kids", kidId), kidData);
 
@@ -728,6 +843,7 @@ async function saveInlineEdit(kidId) {
   KIDS[idx] = kidData;
 
   renderSettingsList();
+  showToast("Changes saved.");
 }
 
 function closeKidForm() {
@@ -837,9 +953,9 @@ async function saveKid() {
     return;
   }
 
-  // Use existing id when editing, generate a new one when adding
+  const pin = document.getElementById("form-pin").value.trim() || null;
   const id = editingKidId || String(Date.now());
-  const kidData = { id, name, dob, chores: [chore], photo: null };
+  const kidData = { id, name, dob, chores: [chore], photo: null, pin };
 
   await setDoc(doc(db, "kids", id), kidData);
 
@@ -894,6 +1010,17 @@ document.getElementById("open-settings-btn").addEventListener("click", openSetti
 document.getElementById("settings-back-btn").addEventListener("click", closeSettings);
 document.getElementById("add-kid-btn").addEventListener("click", function () { openKidForm(null); });
 document.getElementById("save-kid-btn").addEventListener("click", saveKid);
+document.querySelectorAll("#kid-form-section .btn-pin-toggle").forEach(wirePinToggle);
+
+function checkAddKidForm() {
+  const name = document.getElementById("form-name").value.trim();
+  const dob = document.getElementById("form-dob").value;
+  const chore = document.getElementById("form-chore").value.trim();
+  document.getElementById("save-kid-btn").disabled = !(name && dob && chore);
+}
+document.getElementById("form-name").addEventListener("input", checkAddKidForm);
+document.getElementById("form-dob").addEventListener("change", checkAddKidForm);
+document.getElementById("form-chore").addEventListener("input", checkAddKidForm);
 document.getElementById("save-pay-scale-btn").addEventListener("click", savePayScale);
 document.getElementById("cancel-pay-scale-btn").addEventListener("click", function () {
   if (!confirm("You have unsaved changes. Are you sure you want to cancel?")) return;

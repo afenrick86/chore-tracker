@@ -67,8 +67,15 @@
           <label for="form-chore">Chore</label>
           <input type="text" id="form-chore" placeholder="e.g. Clean Living Room" />
         </div>
+        <div class="form-field">
+          <label for="form-pin">PIN (optional)</label>
+          <div class="pin-field-wrap">
+            <input type="password" id="form-pin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" />
+            <button type="button" class="btn-pin-toggle" data-target="form-pin">Show</button>
+          </div>
+        </div>
         <div id="kid-form-buttons">
-          <button id="save-kid-btn">Save</button>
+          <button id="save-kid-btn" disabled>Save</button>
           <button id="cancel-kid-btn">Cancel</button>
         </div>
       </section>
@@ -119,6 +126,25 @@
         <div id="progress-details"></div>
       </section>
 
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast"></div>
+
+    <!-- PIN MODAL: shown when a kid's card is tapped and they have a PIN set -->
+    <div id="pin-modal" class="hidden">
+      <div id="pin-modal-backdrop"></div>
+      <div id="pin-modal-card">
+        <p id="pin-modal-label">Enter PIN for <strong id="pin-modal-name"></strong></p>
+        <div id="pin-inputs">
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        </div>
+        <p id="pin-error" class="hidden">Incorrect PIN. Try again.</p>
+        <button id="pin-cancel-btn">Cancel</button>
+      </div>
     </div>
 
     <script type="module" src="script.js"></script>

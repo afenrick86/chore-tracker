@@ -734,6 +734,34 @@ section h2 {
   background-color: #F7F7F5;
 }
 
+.pin-field-wrap {
+  display: flex;
+  align-items: stretch;
+}
+
+.pin-field-wrap input {
+  flex: 1;
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+}
+
+.btn-pin-toggle {
+  padding: 0 12px;
+  background-color: #F7F7F5;
+  color: #6B7280;
+  border: 1px solid #E5E7EB;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-pin-toggle:hover {
+  background-color: #E5E7EB;
+}
+
 .form-field input:focus {
   outline: none;
   border-color: #2c62ba;
@@ -765,8 +793,13 @@ section h2 {
   cursor: pointer;
 }
 
-.btn-inline-save:hover {
+.btn-inline-save:hover:not(:disabled) {
   background-color: #1e4d9a;
+}
+
+.btn-inline-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .btn-inline-cancel {
@@ -801,8 +834,13 @@ section h2 {
   cursor: pointer;
 }
 
-#save-kid-btn:hover {
+#save-kid-btn:hover:not(:disabled) {
   background-color: #1e4d9a;
+}
+
+#save-kid-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 #cancel-kid-btn {
@@ -927,6 +965,122 @@ section h2 {
   background-color: #E5E7EB;
 }
 
+
+/* =====================
+   TOAST
+   ===================== */
+
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background-color: #1C1C1E;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+  z-index: 200;
+}
+
+#toast.toast-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* =====================
+   PIN MODAL
+   ===================== */
+
+#pin-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#pin-modal.hidden {
+  display: none;
+}
+
+#pin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+#pin-modal-card {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 32px 24px 24px;
+  text-align: center;
+  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+#pin-modal-label {
+  font-size: 1rem;
+  color: #1C1C1E;
+  margin-bottom: 20px;
+}
+
+#pin-inputs {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.pin-digit {
+  width: 52px;
+  height: 52px;
+  text-align: center;
+  font-size: 1.4rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  font-family: inherit;
+  color: #1C1C1E;
+  background-color: #F7F7F5;
+}
+
+.pin-digit:focus {
+  outline: none;
+  border-color: #2c62ba;
+  background-color: white;
+}
+
+#pin-error {
+  font-size: 0.85rem;
+  color: #DC2626;
+  margin-bottom: 12px;
+}
+
+#pin-error.hidden {
+  display: none;
+}
+
+#pin-cancel-btn {
+  padding: 8px 24px;
+  background-color: #F7F7F5;
+  color: #1C1C1E;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+#pin-cancel-btn:hover {
+  background-color: #E5E7EB;
+}
 
 /* =====================
    MOBILE
