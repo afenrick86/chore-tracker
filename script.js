@@ -123,6 +123,23 @@ function renderHome() {
   grid.innerHTML = ""; // clear before re-rendering
 
   const sortedKids = KIDS.filter(function (k) { return !k.archived; }).sort(function (a, b) { return a.dob < b.dob ? -1 : 1; });
+
+  if (sortedKids.length === 0) {
+    grid.innerHTML = `
+      <div id="empty-state">
+        <div id="empty-state-icon">🧹</div>
+        <h2>Welcome to Chore Tracker!</h2>
+        <p>No kids are set up yet. Head to <strong>Manage Kids</strong> in the Parent Dashboard to add your first kid and configure their chore and allowance.</p>
+        <button id="empty-state-btn">Get Started</button>
+      </div>
+    `;
+    document.getElementById("empty-state-btn").addEventListener("click", function () {
+      openDashboard();
+      openSettings();
+    });
+    return;
+  }
+
   sortedKids.forEach(function (kid) {
     const age = calculateAge(kid.dob);
     const maxAllowance = getMaxAllowance(kid);
@@ -1028,7 +1045,7 @@ document.getElementById("cancel-pay-scale-btn").addEventListener("click", functi
   renderPayScale(false);
 });
 document.getElementById("cancel-kid-btn").addEventListener("click", closeKidForm);
-document.querySelector("header h1").addEventListener("click", goHome);
+document.getElementById("site-logo").addEventListener("click", goHome);
 
 document.getElementById("mark-complete").addEventListener("click", function () {
   if (!selectedDate) return;
