@@ -133,9 +133,9 @@ function renderHome() {
   if (sortedKids.length === 0) {
     grid.innerHTML = `
       <div id="empty-state">
-        <div id="empty-state-icon">🧹</div>
-        <h2>Welcome to Chore Tracker!</h2>
-        <p>No kids are set up yet. Head to <strong>Manage Kids</strong> in the Parent Dashboard to add your first kid and configure their chore and allowance.</p>
+        <div id="empty-state-icon"></div>
+        <h2>Welcome to Doneski!</h2>
+        <p>No goals are set up yet. Head to <strong>Manage People</strong> in the Dashboard to add your first person and configure their task and reward.</p>
         <button id="empty-state-btn">Get Started</button>
       </div>
     `;
@@ -882,7 +882,7 @@ function openInlineEditForm(kidId) {
       <input type="date" id="inline-form-dob" value="${kid.dob}" />
     </div>
     <div class="form-field">
-      <label>Chore</label>
+      <label>Task</label>
       <input type="text" id="inline-form-chore" value="${kid.chores.join(", ")}" />
     </div>
     <div class="form-field">
@@ -1047,7 +1047,7 @@ function renderGoalSettings(isDirty) {
       <input type="number" id="goal-target-input" value="${goalConfig.target}" min="1" />
     </div>
     <div class="form-field">
-      <label>Reward</label>
+      <label>Reward (Optional)</label>
       <input type="text" id="goal-reward-input" value="${goalConfig.reward || ""}" placeholder="e.g. Movie night, $20, Ice cream" />
     </div>
     ${type === "perfect-bonus" ? `
@@ -1142,17 +1142,17 @@ async function saveKid() {
 async function removeKid(kidId) {
   const hasHistory = log.some(function (e) { return e.kidId === kidId; });
   if (hasHistory) {
-    alert("This kid has logged history and cannot be deleted. Use Archive instead.");
+    alert("This person has logged history and cannot be deleted. Use Archive instead.");
     return;
   }
-  if (!confirm("Permanently delete this kid? This cannot be undone.")) return;
+  if (!confirm("Permanently delete this person? This cannot be undone.")) return;
   await deleteDoc(doc(db, "kids", kidId));
   KIDS = KIDS.filter(function (k) { return k.id !== kidId; });
   renderSettingsList();
 }
 
 async function archiveKid(kidId) {
-  if (!confirm("Archive this kid? They will be hidden from the app but their history will be preserved.")) return;
+  if (!confirm("Archive this person? They will be hidden from the app but their history will be preserved.")) return;
   const kid = KIDS.find(function (k) { return k.id === kidId; });
   kid.archived = true;
   await setDoc(doc(db, "kids", kidId), kid);

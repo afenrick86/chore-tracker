@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <!-- DASHBOARD VIEW: group stats and per-kid earnings — hidden until opened -->
+    <!-- DASHBOARD VIEW: group stats and per-person earnings — hidden until opened -->
     <div id="dashboard-view" class="hidden">
       <button id="dashboard-back-btn">← Back</button>
       <section>
@@ -37,24 +37,25 @@
         <div id="dashboard-widgets"></div>
       </section>
       <section>
-        <h2>Earnings by Kid</h2>
+        <h2>Individual Overview</h2>
         <div id="dashboard-table"></div>
       </section>
       <div id="settings-btn-wrap">
-        <button id="open-settings-btn">Manage Kids</button>
+        <button id="open-settings-btn">Manage People
+        </button>
       </div>
     </div>
 
-    <!-- SETTINGS VIEW: add/edit/remove kids — hidden until opened -->
+    <!-- SETTINGS VIEW: add/edit/remove people — hidden until opened -->
     <div id="settings-view" class="hidden">
       <button id="settings-back-btn">← Back</button>
       <section>
-        <h2>Kids</h2>
+        <h2>People</h2>
         <div id="settings-kids-list"></div>
-        <button id="add-kid-btn">+ Add Kid</button>
+        <button id="add-kid-btn">+ Add Person</button>
       </section>
       <section id="kid-form-section" class="hidden">
-        <h2 id="kid-form-title">Add Kid</h2>
+        <h2 id="kid-form-title">Add Person</h2>
         <div class="form-field">
           <label for="form-photo">Photo (optional)</label>
           <div class="photo-edit-wrap">
@@ -72,7 +73,7 @@
           <input type="date" id="form-dob" />
         </div>
         <div class="form-field">
-          <label for="form-chore">Chore</label>
+          <label for="form-chore">Task</label>
           <input type="text" id="form-chore" placeholder="e.g. Clean Living Room" />
         </div>
         <div class="form-field">
@@ -93,7 +94,7 @@
       </section>
       <section>
         <h2>Goal &amp; Reward</h2>
-        <p class="settings-hint">Define how kids earn their reward and what they're working toward.</p>
+        <p class="settings-hint">Define how they earn their reward and what they're working toward.</p>
         <div id="goal-settings-form"></div>
         <div id="goal-settings-buttons">
           <button id="save-goal-btn">Save</button>
@@ -104,12 +105,12 @@
       
     </div>
 
-    <!-- KID VIEW: individual tracker — hidden until a kid is selected -->
+    <!-- KID VIEW: individual tracker — hidden until a person is selected -->
     <div id="kid-view" class="hidden">
 
       <button id="back-btn">← Back</button>
 
-      <!-- Kid's name, age, and task(s) — filled in by JavaScript -->
+      <!-- Person's name, age, and task(s) — filled in by JavaScript -->
       <div id="kid-header"></div>
 
       <!-- Log a day's task completion -->
@@ -143,7 +144,7 @@
     <!-- TOAST NOTIFICATION -->
     <div id="toast"></div>
 
-    <!-- PIN MODAL: shown when a kid's card is tapped and they have a PIN set -->
+    <!-- PIN MODAL: shown when a person's card is tapped and they have a PIN set -->
     <div id="pin-modal" class="hidden">
       <div id="pin-modal-backdrop"></div>
       <div id="pin-modal-card">
