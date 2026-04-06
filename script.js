@@ -1126,6 +1126,70 @@ document.getElementById("mark-incomplete").addEventListener("click", function ()
 
 
 // =====================
+// FOOTER & FEEDBACK
+// =====================
+
+const FOOTER_TAGLINES = [
+  "Powered by bad ideas and AI",
+];
+
+document.getElementById("footer-tagline").textContent =
+  FOOTER_TAGLINES[Math.floor(Math.random() * FOOTER_TAGLINES.length)];
+
+function openFeedbackModal() {
+  document.getElementById("feedback-name").value = "";
+  document.getElementById("feedback-message").value = "";
+  document.getElementById("feedback-submit-btn").disabled = true;
+  document.getElementById("feedback-modal").classList.remove("hidden");
+  document.getElementById("feedback-message").focus();
+}
+
+function closeFeedbackModal() {
+  document.getElementById("feedback-modal").classList.add("hidden");
+}
+
+emailjs.init("aJF-FlyUjv0n3P_FT");
+
+async function submitFeedback() {
+  const name = document.getElementById("feedback-name").value.trim();
+  const message = document.getElementById("feedback-message").value.trim();
+  if (!message) return;
+
+  document.getElementById("feedback-submit-btn").disabled = true;
+
+  try {
+    // Save to Firestore
+    await setDoc(doc(db, "feedback", String(Date.now())), {
+      name: name || "Anonymous",
+      body: message,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Send email via EmailJS
+    await emailjs.send("service_s3we7hd", "template_d43d4fo", {
+      name: name || "Anonymous",
+      message,
+      timestamp: new Date().toLocaleString(),
+    });
+
+    closeFeedbackModal();
+    showToast("Feedback sent. Thanks!");
+  } catch (e) {
+    console.error("Feedback submission failed:", e);
+    alert("Something went wrong submitting your feedback. Please try again.");
+    document.getElementById("feedback-submit-btn").disabled = false;
+  }
+}
+
+document.getElementById("feedback-btn").addEventListener("click", openFeedbackModal);
+document.getElementById("feedback-cancel-btn").addEventListener("click", closeFeedbackModal);
+document.getElementById("feedback-modal-backdrop").addEventListener("click", closeFeedbackModal);
+document.getElementById("feedback-submit-btn").addEventListener("click", submitFeedback);
+document.getElementById("feedback-message").addEventListener("input", function () {
+  document.getElementById("feedback-submit-btn").disabled = !this.value.trim();
+});
+
+// =====================
 // INITIALIZE
 // =====================
 

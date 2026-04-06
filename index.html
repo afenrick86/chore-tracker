@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Doneski</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   </head>
   <body>
 
@@ -153,6 +154,36 @@
         <button id="pin-cancel-btn">Cancel</button>
       </div>
     </div>
+
+    <!-- FEEDBACK MODAL -->
+    <div id="feedback-modal" class="hidden">
+      <div id="feedback-modal-backdrop"></div>
+      <div id="feedback-modal-card">
+        <h2>Send Feedback</h2>
+        <p id="feedback-modal-hint">Got an idea or ran into something broken? Let us know.</p>
+        <div class="form-field">
+          <label for="feedback-name">Name (optional)</label>
+          <input type="text" id="feedback-name" placeholder="Your name" />
+        </div>
+        <div class="form-field">
+          <label for="feedback-message">Message</label>
+          <textarea id="feedback-message" placeholder="What's on your mind?" rows="4"></textarea>
+        </div>
+        <div id="feedback-modal-buttons">
+          <button id="feedback-submit-btn" disabled>Submit</button>
+          <button id="feedback-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedback-btn-wrap">
+      <button id="feedback-btn">Send Feedback</button>
+    </div>
+
+    <!-- FOOTER -->
+    <footer id="site-footer">
+      <p id="footer-tagline"></p>
+    </footer>
 
     <script type="module" src="script.js"></script>
 
