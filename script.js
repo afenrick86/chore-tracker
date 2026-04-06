@@ -98,7 +98,7 @@ function getMaxAllowance(kid) {
   const age = calculateAge(kid.dob);
   // Walk through the tiers and return the amount for the first tier the age fits into
   const tier = ALLOWANCE_TIERS.find(function (t) { return age <= t.maxAge; });
-  return tier.amount;
+  return tier ? tier.amount : ALLOWANCE_TIERS[ALLOWANCE_TIERS.length - 1].amount;
 }
 
 // Returns how many days are in a given month
@@ -279,10 +279,8 @@ async function openKid(kidId) {
   const age = calculateAge(kid.dob);
   const maxAllowance = getMaxAllowance(kid);
 
-  // Hide all other views, show the kid view
-  document.getElementById("home-view").classList.add("hidden");
-  document.getElementById("loading-view").classList.add("hidden");
-  document.getElementById("kid-view").classList.remove("hidden");
+  location.hash = "kid-" + kidId;
+  showView("kid-view");
 
   // Build photo element — same logic as the home card
   const photoHtml = kid.photo
@@ -323,14 +321,18 @@ async function openKid(kidId) {
 }
 
 // Returns to the home view
+function showView(viewId) {
+  ["home-view", "kid-view", "dashboard-view", "settings-view", "loading-view"].forEach(function (id) {
+    document.getElementById(id).classList.add("hidden");
+  });
+  document.getElementById(viewId).classList.remove("hidden");
+}
+
 function goHome() {
   window.scrollTo(0, 0);
   activeKidId = null;
-  document.getElementById("kid-view").classList.add("hidden");
-  document.getElementById("dashboard-view").classList.add("hidden");
-  document.getElementById("settings-view").classList.add("hidden");
-  document.getElementById("loading-view").classList.add("hidden");
-  document.getElementById("home-view").classList.remove("hidden");
+  location.hash = "";
+  showView("home-view");
   renderHome();
 }
 
@@ -356,7 +358,9 @@ async function logEntry(kidId, date, completed) {
   // Save the updated entry to Firestore.
   // Each document is keyed by "kidId_date" so it's easy to find and overwrite.
   const entryKey = `${kidId}_${date}`;
-  await setDoc(doc(db, "chore-log", entryKey), { kidId, date, completed });
+  await setDoc(doc(db, "chore-log", entryKey), { kidId, date, 
+    
+   });
 
   // Refresh the log list and progress stats
   renderMonthLog(kidId);
@@ -624,9 +628,8 @@ function renderDashboard() {
 
 function openDashboard() {
   window.scrollTo(0, 0);
-  document.getElementById("home-view").classList.add("hidden");
-  document.getElementById("loading-view").classList.add("hidden");
-  document.getElementById("dashboard-view").classList.remove("hidden");
+  location.hash = "dashboard";
+  showView("dashboard-view");
   renderDashboard();
 }
 
@@ -669,16 +672,14 @@ let editingKidId = null;
 
 function openSettings() {
   window.scrollTo(0, 0);
-  document.getElementById("dashboard-view").classList.add("hidden");
-  document.getElementById("settings-view").classList.remove("hidden");
+  location.hash = "settings";
+  showView("settings-view");
   renderSettingsList();
   renderPayScale();
 }
 
 function closeSettings() {
-  document.getElementById("settings-view").classList.add("hidden");
-  document.getElementById("dashboard-view").classList.remove("hidden");
-  renderDashboard();
+  openDashboard();
 }
 
 // Renders the list of current kids in the settings page
@@ -1231,8 +1232,36 @@ async function init() {
     console.error("Firestore load failed:", e);
   }
   document.getElementById("loading-view").classList.add("hidden");
-  document.getElementById("home-view").classList.remove("hidden");
+  navigateTo(location.hash);
+}
+
+function navigateTo(hash) {
+  if (hash.startsWith("#kid-")) {
+    const kidId = hash.slice(5);
+    const kid = KIDS.find(function (k) { return k.id === kidId; });
+    if (kid) {
+      openKid(kidId);
+      return;
+    }
+  }
+  if (hash === "#dashboard") {
+    showView("dashboard-view");
+    renderDashboard();
+    return;
+  }
+  if (hash === "#settings") {
+    showView("settings-view");
+    renderSettingsList();
+    renderPayScale();
+    return;
+  }
+  // Default: home
+  showView("home-view");
   renderHome();
 }
+
+window.addEventListener("hashchange", function () {
+  navigateTo(location.hash);
+});
 
 init();
